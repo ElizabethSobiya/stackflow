@@ -1,0 +1,14 @@
+spring:
+  jpa:
+    properties:
+      hibernate:
+        format_sql: true
+
+logging:
+  level:
+    com.stackflow.inventory: DEBUG
+
+stackflow:
+  seed:
+    # Populates an empty dev database with demo users, products and orders on startup.
+    enabled: true

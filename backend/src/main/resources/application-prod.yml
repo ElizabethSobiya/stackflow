@@ -1,0 +1,18 @@
+spring:
+  jpa:
+    properties:
+      hibernate:
+        format_sql: false
+
+server:
+  error:
+    include-message: never
+
+logging:
+  level:
+    com.stackflow.inventory: INFO
+    org.hibernate.SQL: WARN
+
+stackflow:
+  seed:
+    enabled: false
