@@ -1,0 +1,38 @@
+# Rendered by the nginx image's envsubst at container start (see Dockerfile: /etc/nginx/templates).
+# API_UPSTREAM lets the same image point at a sidecar API in compose or a real host in production.
+server {
+    listen       80;
+    server_name  _;
+    root         /usr/share/nginx/html;
+    index        index.html;
+
+    # The SPA calls a same-origin /api, so nginx forwards it to the backend.
+    location /api/ {
+        proxy_pass ${API_UPSTREAM}/api/;
+        proxy_set_header Host              $host;
+        proxy_set_header X-Real-IP         $remote_addr;
+        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # Hashed bundles are immutable; index.html must never be cached or users keep a stale shell
+    # pointing at chunks that no longer exist after a deploy.
+    location ~* \.(?:js|css|woff2?|svg|png|jpg|ico)$ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+        try_files $uri =404;
+    }
+
+    location = /index.html {
+        add_header Cache-Control "no-store";
+    }
+
+    # Client-side routing: unknown paths are handed to the Angular router.
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    gzip on;
+    gzip_types text/css application/javascript application/json image/svg+xml;
+    gzip_min_length 1024;
+}
