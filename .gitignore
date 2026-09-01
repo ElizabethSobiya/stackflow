@@ -1,0 +1,18 @@
+# --- backend ---
+backend/target/
+*.class
+*.log
+
+# --- frontend ---
+frontend/node_modules/
+frontend/dist/
+frontend/.angular/
+
+# --- tooling / editors ---
+.idea/
+*.iml
+.vscode/
+.DS_Store
+
+# --- local config ---
+.env
