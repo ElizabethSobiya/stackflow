@@ -50,10 +50,22 @@ or say in the README that the demo may need a moment to wake.
 Two minutes here saves a slow cycle of Render builds. From the repository root, with your own string:
 
 ```bash
-export SUPABASE_URL='postgresql://postgres.<ref>:<password>@aws-0-<region>.pooler.supabase.com:5432/postgres'
+# 1. is the string well-formed, and does it actually connect?
+./scripts/verify-database-url.sh 'postgresql://postgres.<ref>:<password>@aws-0-<region>.pooler.supabase.com:5432/postgres'
+```
 
-# 1. can anything reach it at all?
-docker run --rm postgres:16-alpine psql "$SUPABASE_URL" -c 'select version();'
+That checks the shape, catches the three mistakes below, then opens a real connection — without
+printing the password.
+
+| It reports | Because |
+| --- | --- |
+| `[YOUR-PASSWORD]` still present | The dashboard copies a placeholder, not your password |
+| Port 6543 | Transaction pooler — breaks prepared statements and Flyway's migration lock |
+| Host `db.*.supabase.co` | Direct connection, IPv6-only without the paid add-on |
+| Unencoded `@` in the password | Tools disagree on which `@` splits the URL; encode it as `%40` |
+
+```bash
+export SUPABASE_URL='postgresql://postgres.<ref>:<password>@aws-0-<region>.pooler.supabase.com:5432/postgres'
 
 # 2. can the app? (this also creates the schema)
 cd backend
