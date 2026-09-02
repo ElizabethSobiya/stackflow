@@ -2,11 +2,31 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>StackFlow — Inventory & Orders</title>
+  <title>StackFlow — Inventory &amp; Orders</title>
   <base href="/">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light dark">
+  <meta name="description" content="Inventory and order management: catalog, stock control and an auditable order workflow.">
+  <meta name="theme-color" content="#f6f7f9" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0e1116" media="(prefers-color-scheme: dark)">
   <link rel="icon" type="image/x-icon" href="favicon.ico">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script>
+    // Applies the saved theme before first paint. Without this the app renders in the
+    // system theme for a frame and visibly flips — the classic dark-mode flash.
+    (function () {
+      try {
+        var saved = localStorage.getItem('stackflow.theme');
+        if (saved === 'light' || saved === 'dark') {
+          document.documentElement.setAttribute('data-theme', saved);
+        }
+      } catch (e) {
+        /* storage blocked: fall back to the system preference */
+      }
+    })();
+  </script>
 </head>
 <body>
   <app-root></app-root>
