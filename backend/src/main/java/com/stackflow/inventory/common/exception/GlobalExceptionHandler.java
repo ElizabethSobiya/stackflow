@@ -11,10 +11,13 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
+import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 /**
  * Translates exceptions into the single {@link ApiError} contract.
@@ -120,6 +123,46 @@ public class GlobalExceptionHandler {
                         HttpStatus.FORBIDDEN.value(),
                         ErrorCode.ACCESS_DENIED,
                         "You do not have permission to perform this action.",
+                        request.getRequestURI()));
+    }
+
+    /**
+     * A body Spring could not parse — malformed JSON, a value of the wrong type, or a string that
+     * is not one of an enum's constants. The request never reaches a controller, so without this it
+     * would fall to the catch-all below and be reported as a server fault.
+     */
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ApiError> handleUnreadableBody(
+            HttpMessageNotReadableException ex, HttpServletRequest request) {
+        log.warn("Unreadable request body on {} {}: {}", request.getMethod(), request.getRequestURI(), ex.getMessage());
+        return ResponseEntity.badRequest()
+                .body(ApiError.of(
+                        HttpStatus.BAD_REQUEST.value(),
+                        ErrorCode.MALFORMED_REQUEST,
+                        "The request body is malformed or contains a value this endpoint does not accept.",
+                        request.getRequestURI()));
+    }
+
+    /** An unmapped path. A typo in a URL is the client's mistake, not a server fault. */
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<ApiError> handleNoResource(NoResourceFoundException ex, HttpServletRequest request) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(ApiError.of(
+                        HttpStatus.NOT_FOUND.value(),
+                        ErrorCode.RESOURCE_NOT_FOUND,
+                        "No endpoint matches this request.",
+                        request.getRequestURI()));
+    }
+
+    /** A known path addressed with the wrong verb. */
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<ApiError> handleMethodNotSupported(
+            HttpRequestMethodNotSupportedException ex, HttpServletRequest request) {
+        return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED)
+                .body(ApiError.of(
+                        HttpStatus.METHOD_NOT_ALLOWED.value(),
+                        ErrorCode.METHOD_NOT_ALLOWED,
+                        "%s is not supported by this endpoint.".formatted(ex.getMethod()),
                         request.getRequestURI()));
     }
 

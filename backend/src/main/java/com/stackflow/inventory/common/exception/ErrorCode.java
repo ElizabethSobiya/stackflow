@@ -12,6 +12,8 @@ public final class ErrorCode {
     public static final String INVALID_STATUS_TRANSITION = "INVALID_STATUS_TRANSITION";
     public static final String AUTHENTICATION_FAILED = "AUTHENTICATION_FAILED";
     public static final String ACCESS_DENIED = "ACCESS_DENIED";
+    public static final String MALFORMED_REQUEST = "MALFORMED_REQUEST";
+    public static final String METHOD_NOT_ALLOWED = "METHOD_NOT_ALLOWED";
     public static final String INTERNAL_ERROR = "INTERNAL_ERROR";
 
     private ErrorCode() {}

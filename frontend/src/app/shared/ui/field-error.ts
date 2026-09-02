@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, input, signal } from '@angular/core';
 import { AbstractControl } from '@angular/forms';
 
 const MESSAGES: Record<string, (error: never) => string> = {
@@ -31,10 +31,22 @@ export class FieldError {
   readonly control = input.required<AbstractControl>();
 
   /**
-   * A method rather than a `computed`: `AbstractControl` exposes plain properties, not signals, so a
-   * computed would cache the first result and never see the control become invalid.
+   * `AbstractControl` exposes plain properties rather than signals, and the app is zoneless, so
+   * marking a control touched notifies nothing: this component is OnPush and its input keeps the
+   * same reference, so it is skipped on the parent's next check and the error never appears. Its
+   * event stream supplies the notification the properties do not.
    */
-  protected message(): string | null {
+  private readonly revision = signal(0);
+
+  constructor() {
+    effect((onCleanup) => {
+      const subscription = this.control().events.subscribe(() => this.revision.update((n) => n + 1));
+      onCleanup(() => subscription.unsubscribe());
+    });
+  }
+
+  protected readonly message = computed<string | null>(() => {
+    this.revision();
     const control = this.control();
     if (!control.errors || (!control.touched && !control.dirty)) {
       return null;
@@ -42,5 +54,5 @@ export class FieldError {
     const [key, value] = Object.entries(control.errors)[0];
     const factory = MESSAGES[key];
     return factory ? factory(value as never) : 'This value is not valid';
-  }
+  });
 }
