@@ -1,0 +1,55 @@
+# Render Blueprint — deploys the database, the API and the UI from this repository.
+#
+#   1. Push this repo to GitHub
+#   2. Render → New → Blueprint → pick the repo
+#   3. Fill in the two values marked `sync: false` (they are asked for during setup)
+#
+# Free-tier note: the API sleeps after inactivity, so the first request after a pause takes ~30s.
+databases:
+  - name: stackflow-db
+    databaseName: stackflow
+    user: stackflow
+    plan: free
+
+services:
+  - type: web
+    name: stackflow-api
+    runtime: docker
+    plan: free
+    region: frankfurt
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    # Render waits for this before routing traffic, and restarts the instance if it stops passing.
+    healthCheckPath: /actuator/health
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: prod
+      # Injected as postgres://… and translated to JDBC by DatabaseUrlEnvironmentPostProcessor.
+      - key: DATABASE_URL
+        fromDatabase:
+          name: stackflow-db
+          property: connectionString
+      # Render generates a strong value once and keeps it — never commit a real secret.
+      - key: JWT_SECRET
+        generateValue: true
+      # The deployed frontend origin, e.g. https://stackflow-web.onrender.com — no trailing slash.
+      - key: CORS_ALLOWED_ORIGINS
+        sync: false
+
+  - type: web
+    name: stackflow-web
+    runtime: static
+    buildCommand: cd frontend && npm ci && npm run build
+    staticPublishPath: frontend/dist/inventory-web/browser
+    envVars:
+      # The deployed API, including /api — e.g. https://stackflow-api.onrender.com/api
+      - key: API_BASE_URL
+        sync: false
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    headers:
+      - path: /index.html
+        name: Cache-Control
+        value: no-store

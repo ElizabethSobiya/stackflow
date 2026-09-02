@@ -1,0 +1,25 @@
+[build]
+  command = "npm run build"
+  publish = "dist/inventory-web/browser"
+
+# Client-side routing: every unknown path is the Angular router's, not a 404.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+[[headers]]
+  for = "/index.html"
+  [headers.values]
+    Cache-Control = "no-store"
+
+# Bundles are content-hashed, so they can be cached forever.
+[[headers]]
+  for = "/*.js"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/*.css"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
