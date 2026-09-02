@@ -45,6 +45,35 @@ activity**, and a paused project is restorable from the dashboard for 90 days. D
 a dormant demo needs one click to wake up. If the link is going on a CV, either open it occasionally
 or say in the README that the demo may need a moment to wake.
 
+### Prove the connection string before deploying
+
+Two minutes here saves a slow cycle of Render builds. From the repository root, with your own string:
+
+```bash
+export SUPABASE_URL='postgresql://postgres.<ref>:<password>@aws-0-<region>.pooler.supabase.com:5432/postgres'
+
+# 1. can anything reach it at all?
+docker run --rm postgres:16-alpine psql "$SUPABASE_URL" -c 'select version();'
+
+# 2. can the app? (this also creates the schema)
+cd backend
+DATABASE_URL="$SUPABASE_URL" \
+SPRING_PROFILES_ACTIVE=prod \
+JWT_SECRET="$(openssl rand -base64 48)" \
+CORS_ALLOWED_ORIGINS=http://localhost:4200 \
+./mvnw spring-boot:run
+```
+
+Look for `Successfully applied 1 migration` in the output, then `curl localhost:8080/actuator/health`.
+Supabase's **Table Editor** should now list `users`, `products`, `orders` and the rest.
+
+Swap `prod` for `dev` on that run if you want the demo catalog and orders seeded into the deployed
+database — an interviewer opening a populated dashboard beats an empty one. The seeder only fires
+against a database with no users, so it cannot double up later.
+
+The connection string is a credential: keep it in the shell, in Render's environment variables, or in
+a local `.env` (already git-ignored). Never in a committed file.
+
 ---
 
 ## Step 2 — the API (Render)
