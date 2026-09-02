@@ -1,15 +1,45 @@
+# Production profile: nothing that helps locally but leaks or costs in production.
 spring:
   jpa:
     properties:
       hibernate:
         format_sql: false
+  datasource:
+    hikari:
+      # Managed Postgres free tiers cap connections aggressively; keep the pool modest and
+      # let requests queue rather than have the database refuse them.
+      maximum-pool-size: ${DB_POOL_SIZE:5}
+      minimum-idle: ${DB_POOL_MIN_IDLE:1}
+      connection-timeout: 20000
 
 server:
   error:
     include-message: never
+    include-stacktrace: never
+    include-binding-errors: never
+
+management:
+  endpoints:
+    web:
+      exposure:
+        # Only the probe a platform needs; metrics stay off the public internet.
+        include: health
+  endpoint:
+    health:
+      show-details: never
+      probes:
+        enabled: true
+
+# Interactive API docs are a development aid, not a production endpoint.
+springdoc:
+  api-docs:
+    enabled: ${ENABLE_API_DOCS:false}
+  swagger-ui:
+    enabled: ${ENABLE_API_DOCS:false}
 
 logging:
   level:
+    root: WARN
     com.stackflow.inventory: INFO
     org.hibernate.SQL: WARN
 
