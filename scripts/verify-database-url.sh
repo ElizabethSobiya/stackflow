@@ -35,6 +35,18 @@ case "$URL" in
     ;;
 esac
 
+# Whitespace is invisible in a paste and survives every shape check, so the connection just
+# fails with a plain "password authentication failed". Not stripped automatically: the same
+# stray character would still be sitting in the platform's environment variable field.
+case "$URL" in
+  *[[:space:]])
+    fail "The string ends in whitespace — remove the trailing space or newline"
+    echo; echo "Fix the above before deploying. Nothing was contacted."; exit 1 ;;
+  [[:space:]]*)
+    fail "The string starts with whitespace — remove the leading space"
+    echo; echo "Fix the above before deploying. Nothing was contacted."; exit 1 ;;
+esac
+
 # Same reason: brackets left around the password parse as an IPv6 literal and raise.
 case "$URL" in
   *:'['*']'@*)
@@ -69,6 +81,7 @@ emit("HAS_PASSWORD", "yes" if password else "no")
 # urlsplit does not percent-decode; libpq does. Report the two ways that disagreement bites,
 # without ever emitting the password itself.
 pw = password or ""
+emit("PW_HAS_SPACE", "yes" if re.search(r"\s", pw) else "no")
 emit("PW_BAD_ESCAPE", "yes" if re.search("%(?![0-9A-Fa-f]{2})", pw) else "no")
 # Python splits the authority at the LAST @, libpq at the FIRST. When they disagree the shape
 # check passes and the connection then fails with a baffling DNS error, so count them here.
@@ -92,6 +105,11 @@ fi
 [ -n "$USER" ] && pass "user:     $USER" || fail "user:     missing"
 [ -n "$DBNAME" ] && pass "database: $DBNAME" || fail "database: missing"
 [ "$HAS_PASSWORD" = "yes" ] && pass "password: set (not shown)" || fail "password: missing"
+
+if [ "${PW_HAS_SPACE:-no}" = "yes" ]; then
+  warn "The password contains a space. If that is not deliberate it is a paste artefact, and
+      authentication will fail with no hint that whitespace is the reason."
+fi
 
 if [ "${PW_BAD_ESCAPE:-no}" = "yes" ]; then
   fail "The password contains a % that is not a valid percent-escape. A literal % must be
