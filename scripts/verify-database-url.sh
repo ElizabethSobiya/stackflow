@@ -35,9 +35,20 @@ case "$URL" in
     ;;
 esac
 
+# Same reason: brackets left around the password parse as an IPv6 literal and raise.
+case "$URL" in
+  *:'['*']'@*)
+    fail "The password is still wrapped in square brackets — replace the brackets along with
+      the placeholder text, so that :[hunter2]@ reads :hunter2@"
+    echo
+    echo "Fix the above before deploying. Nothing was contacted."
+    exit 1
+    ;;
+esac
+
 # --- shape -------------------------------------------------------------------
 eval "$(URL="$URL" python3 - <<'PY'
-import os, urllib.parse as u, shlex
+import os, re, urllib.parse as u, shlex
 
 def emit(k, v):
     print(f"{k}={shlex.quote('' if v is None else str(v))}")
@@ -55,6 +66,10 @@ emit("PORT", port)
 emit("DBNAME", dbname)
 emit("USER", user)
 emit("HAS_PASSWORD", "yes" if password else "no")
+# urlsplit does not percent-decode; libpq does. Report the two ways that disagreement bites,
+# without ever emitting the password itself.
+pw = password or ""
+emit("PW_BAD_ESCAPE", "yes" if re.search("%(?![0-9A-Fa-f]{2})", pw) else "no")
 # Python splits the authority at the LAST @, libpq at the FIRST. When they disagree the shape
 # check passes and the connection then fails with a baffling DNS error, so count them here.
 authority = os.environ["URL"].split("://", 1)[-1].split("/", 1)[0]
@@ -77,6 +92,11 @@ fi
 [ -n "$USER" ] && pass "user:     $USER" || fail "user:     missing"
 [ -n "$DBNAME" ] && pass "database: $DBNAME" || fail "database: missing"
 [ "$HAS_PASSWORD" = "yes" ] && pass "password: set (not shown)" || fail "password: missing"
+
+if [ "${PW_BAD_ESCAPE:-no}" = "yes" ]; then
+  fail "The password contains a % that is not a valid percent-escape. A literal % must be
+      written as %25, otherwise it is read as the start of an escape sequence."
+fi
 
 if [ "${AT_COUNT:-1}" -gt 1 ]; then
   fail "The password contains an unencoded @ — percent-encode it as %40.
