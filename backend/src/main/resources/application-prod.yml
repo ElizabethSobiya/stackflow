@@ -42,6 +42,9 @@ logging:
     root: WARN
     com.stackflow.inventory: INFO
     org.hibernate.SQL: WARN
+    # Kept at INFO deliberately: on a fresh deployment the migration summary is the only
+    # evidence in the logs that the schema was created against the database you meant.
+    org.flywaydb.core.internal.command: INFO
 
 stackflow:
   seed:

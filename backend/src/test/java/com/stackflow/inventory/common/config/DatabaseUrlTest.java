@@ -40,6 +40,19 @@ class DatabaseUrlTest {
     }
 
     @Test
+    @DisplayName("handles a Supabase session-pooler URL, dotted username and all")
+    void parsesSupabasePoolerUrl() {
+        DatabaseUrl parsed = DatabaseUrl.parse(
+                        "postgresql://postgres.abcdefghijklmnop:s3cret@aws-0-eu-central-1.pooler.supabase.com:5432/postgres?sslmode=require")
+                .orElseThrow();
+
+        assertThat(parsed.jdbcUrl())
+                .isEqualTo("jdbc:postgresql://aws-0-eu-central-1.pooler.supabase.com:5432/postgres?sslmode=require");
+        assertThat(parsed.username()).isEqualTo("postgres.abcdefghijklmnop");
+        assertThat(parsed.password()).isEqualTo("s3cret");
+    }
+
+    @Test
     void leavesAnExistingJdbcUrlAlone() {
         assertThat(DatabaseUrl.parse("jdbc:postgresql://localhost:5432/stackflow")).isEmpty();
     }
@@ -48,6 +61,29 @@ class DatabaseUrlTest {
     @ValueSource(strings = {"", "   ", "not a url", "mysql://user:pass@host/db", "postgres://host"})
     void ignoresAnythingItCannotTranslate(String value) {
         assertThat(DatabaseUrl.parse(value)).isEmpty();
+    }
+
+    @Test
+    @DisplayName("the dashboard's placeholder password is not a usable URL")
+    void rejectsTheSupabasePlaceholder() {
+        // Copied straight from the Supabase dashboard without substituting the password — the
+        // single most common way this variable is set wrongly.
+        assertThat(DatabaseUrl.parse(
+                        "postgresql://postgres.abcdefgh:[YOUR-PASSWORD]@aws-0-eu-central-1.pooler.supabase.com:5432/postgres"))
+                .isEmpty();
+    }
+
+    @Test
+    @DisplayName("an unencoded @ in the password cannot be parsed")
+    void rejectsUnencodedAtSignInPassword() {
+        // "p@ss" splits the URI at the wrong @, leaving a host that does not exist.
+        DatabaseUrl parsed = DatabaseUrl.parse("postgres://user:p@ss@host:5432/db").orElse(null);
+        assertThat(parsed == null || !"host".equals(hostOf(parsed))).isTrue();
+    }
+
+    private static String hostOf(DatabaseUrl url) {
+        String withoutScheme = url.jdbcUrl().replace("jdbc:postgresql://", "");
+        return withoutScheme.substring(0, withoutScheme.indexOf(':'));
     }
 
     @Test

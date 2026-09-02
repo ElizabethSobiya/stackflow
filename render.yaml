@@ -1,22 +1,19 @@
-# Render Blueprint — deploys the database, the API and the UI from this repository.
+# Render Blueprint — deploys the API and the UI. The database lives on Supabase.
 #
-#   1. Push this repo to GitHub
-#   2. Render → New → Blueprint → pick the repo
-#   3. Fill in the two values marked `sync: false` (they are asked for during setup)
+#   1. Create the Supabase project first and copy its **session pooler** connection string
+#      (see docs/DEPLOYMENT.md — the pooler on port 5432, not the direct connection).
+#   2. Render → New → Blueprint → pick this repo.
+#   3. Fill in the three values marked `sync: false` when prompted.
 #
 # Free-tier note: the API sleeps after inactivity, so the first request after a pause takes ~30s.
-databases:
-  - name: stackflow-db
-    databaseName: stackflow
-    user: stackflow
-    plan: free
-
 services:
   - type: web
     name: stackflow-api
     runtime: docker
     plan: free
-    region: frankfurt
+    # Keep this near the Supabase project. The database is in ap-northeast-1 (Tokyo), and
+    # Singapore is the closest free Render region — Frankfurt adds ~230ms to every query.
+    region: singapore
     dockerfilePath: ./backend/Dockerfile
     dockerContext: ./backend
     # Render waits for this before routing traffic, and restarts the instance if it stops passing.
@@ -24,17 +21,20 @@ services:
     envVars:
       - key: SPRING_PROFILES_ACTIVE
         value: prod
-      # Injected as postgres://… and translated to JDBC by DatabaseUrlEnvironmentPostProcessor.
+      # Supabase session-pooler URL, e.g.
+      # postgresql://postgres.<project-ref>:<password>@aws-0-<region>.pooler.supabase.com:5432/postgres
+      # Translated to JDBC on startup by DatabaseUrlEnvironmentPostProcessor.
       - key: DATABASE_URL
-        fromDatabase:
-          name: stackflow-db
-          property: connectionString
+        sync: false
       # Render generates a strong value once and keeps it — never commit a real secret.
       - key: JWT_SECRET
         generateValue: true
       # The deployed frontend origin, e.g. https://stackflow-web.onrender.com — no trailing slash.
       - key: CORS_ALLOWED_ORIGINS
         sync: false
+      # Supabase's free pooler allows a modest number of client connections; stay well under it.
+      - key: DB_POOL_SIZE
+        value: "5"
 
   - type: web
     name: stackflow-web

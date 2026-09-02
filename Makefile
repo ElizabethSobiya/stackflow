@@ -2,7 +2,7 @@
 .DEFAULT_GOAL := help
 SHELL := /bin/bash
 
-.PHONY: help db-up db-down api web test test-api test-web build clean
+.PHONY: help db-up db-down api web test test-api test-web build clean check-db
 
 help: ## Show available targets
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
@@ -26,6 +26,9 @@ test-api: ## Backend tests (unit + integration on in-memory H2)
 
 test-web: ## Frontend tests (vitest, single run)
 	cd frontend && npm run test:ci
+
+check-db: ## Validate a DATABASE_URL before deploying (DATABASE_URL=... make check-db)
+	./scripts/verify-database-url.sh
 
 build: ## Production build of both halves
 	cd backend && ./mvnw -DskipTests package
