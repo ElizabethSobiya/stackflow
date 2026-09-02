@@ -1,0 +1,57 @@
+package com.stackflow.inventory.common.config;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+import java.util.Optional;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
+
+class DatabaseUrlTest {
+
+    @Test
+    @DisplayName("translates a platform DATABASE_URL into JDBC parts")
+    void parsesPlatformUrl() {
+        Optional<DatabaseUrl> parsed =
+                DatabaseUrl.parse("postgres://stackflow:s3cret@db.internal:5432/stackflow_prod");
+
+        assertThat(parsed).isPresent();
+        assertThat(parsed.get().jdbcUrl()).isEqualTo("jdbc:postgresql://db.internal:5432/stackflow_prod");
+        assertThat(parsed.get().username()).isEqualTo("stackflow");
+        assertThat(parsed.get().password()).isEqualTo("s3cret");
+    }
+
+    @Test
+    void keepsQueryParametersSuchAsSslMode() {
+        DatabaseUrl parsed = DatabaseUrl.parse("postgresql://u:p@host/db?sslmode=require").orElseThrow();
+
+        assertThat(parsed.jdbcUrl()).isEqualTo("jdbc:postgresql://host:5432/db?sslmode=require");
+    }
+
+    @Test
+    @DisplayName("decodes percent-encoded credentials — generated passwords contain / and @")
+    void decodesEscapedCredentials() {
+        DatabaseUrl parsed = DatabaseUrl.parse("postgres://user%40corp:pa%2Fss@host:6543/db").orElseThrow();
+
+        assertThat(parsed.username()).isEqualTo("user@corp");
+        assertThat(parsed.password()).isEqualTo("pa/ss");
+        assertThat(parsed.jdbcUrl()).isEqualTo("jdbc:postgresql://host:6543/db");
+    }
+
+    @Test
+    void leavesAnExistingJdbcUrlAlone() {
+        assertThat(DatabaseUrl.parse("jdbc:postgresql://localhost:5432/stackflow")).isEmpty();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"", "   ", "not a url", "mysql://user:pass@host/db", "postgres://host"})
+    void ignoresAnythingItCannotTranslate(String value) {
+        assertThat(DatabaseUrl.parse(value)).isEmpty();
+    }
+
+    @Test
+    void ignoresNull() {
+        assertThat(DatabaseUrl.parse(null)).isEmpty();
+    }
+}

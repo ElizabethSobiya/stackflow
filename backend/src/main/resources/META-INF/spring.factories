@@ -1,0 +1,4 @@
+# Runs before the application context exists, so a platform-injected DATABASE_URL is already
+# translated by the time Flyway and the DataSource are created.
+org.springframework.boot.env.EnvironmentPostProcessor=\
+  com.stackflow.inventory.common.config.DatabaseUrlEnvironmentPostProcessor
