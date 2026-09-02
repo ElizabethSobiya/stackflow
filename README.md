@@ -94,7 +94,7 @@ stackflow/
 │       ├── layout/              authenticated shell
 │       └── features/            auth, dashboard, products, stock, orders (all lazy-loaded)
 ├── docs/                        architecture, API reference, deployment, engineering notes
-├── render.yaml                  one-click Render blueprint (database + API + web)
+├── render.yaml                  Render blueprint (API + web; database lives on Supabase)
 ├── docker-compose.yml           Postgres, plus a `full` profile that runs the whole stack
 └── Makefile
 ```
@@ -145,10 +145,11 @@ Two units: the API (a container) and the web app (static files). Full walkthroug
 docker compose --profile full up --build     # everything locally: UI :8081, API :8080, Postgres
 ```
 
-For a hosted deployment, [`render.yaml`](./render.yaml) declares the database, the API and the static
-site in one blueprint: point Render at the repo, fill in two URLs, apply. The API also runs unchanged
-on Railway, Fly or any container host, and the frontend deploys to Vercel or Netlify with the configs
-in `frontend/`.
+For a hosted deployment: **Postgres on Supabase**, **API and web app on Render** via
+[`render.yaml`](./render.yaml) — point Render at the repo, paste in three values, apply. Supabase
+rather than Render's own free database because that one is deleted 30 days after creation; use its
+*session pooler* connection string (port 5432). The API also runs unchanged on Railway, Fly or any
+container host, and the frontend deploys to Vercel or Netlify with the configs in `frontend/`.
 
 Whatever the host, two variables have to agree:
 
@@ -157,9 +158,9 @@ Whatever the host, two variables have to agree:
 | API | `CORS_ALLOWED_ORIGINS` | the frontend's exact origin |
 | Web build | `API_BASE_URL` | the API's URL including `/api` |
 
-Plus, on the API: `SPRING_PROFILES_ACTIVE=prod`, a database (`DATABASE_URL` in `postgres://…` form is
-translated to JDBC automatically), and a `JWT_SECRET` of at least 32 bytes — the app refuses to start
-with a weaker one.
+Plus, on the API: `SPRING_PROFILES_ACTIVE=prod`, a `DATABASE_URL` (any `postgres://…` string is
+translated to JDBC automatically, so Supabase, Neon, Railway and Fly all work as-is), and a
+`JWT_SECRET` of at least 32 bytes — the app refuses to start with a weaker one.
 
 After the first deploy, **register immediately**: the first account created on an empty database
 becomes the administrator.

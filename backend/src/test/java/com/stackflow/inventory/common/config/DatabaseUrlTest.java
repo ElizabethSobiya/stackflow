@@ -40,6 +40,19 @@ class DatabaseUrlTest {
     }
 
     @Test
+    @DisplayName("handles a Supabase session-pooler URL, dotted username and all")
+    void parsesSupabasePoolerUrl() {
+        DatabaseUrl parsed = DatabaseUrl.parse(
+                        "postgresql://postgres.abcdefghijklmnop:s3cret@aws-0-eu-central-1.pooler.supabase.com:5432/postgres?sslmode=require")
+                .orElseThrow();
+
+        assertThat(parsed.jdbcUrl())
+                .isEqualTo("jdbc:postgresql://aws-0-eu-central-1.pooler.supabase.com:5432/postgres?sslmode=require");
+        assertThat(parsed.username()).isEqualTo("postgres.abcdefghijklmnop");
+        assertThat(parsed.password()).isEqualTo("s3cret");
+    }
+
+    @Test
     void leavesAnExistingJdbcUrlAlone() {
         assertThat(DatabaseUrl.parse("jdbc:postgresql://localhost:5432/stackflow")).isEmpty();
     }
