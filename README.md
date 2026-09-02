@@ -64,7 +64,7 @@ DB_URL=jdbc:postgresql://localhost:55432/stackflow ./mvnw spring-boot:run -Dspri
 ## Tests
 
 ```bash
-cd backend  && ./mvnw test      # 59 tests — domain, services, JWT, retry, plus a full HTTP-level workflow test
+cd backend  && ./mvnw test      # 69 tests — domain, services, JWT, retry, config parsing, plus a full HTTP-level workflow test
 cd frontend && npm run test:ci  # 14 tests — auth session, token-refresh interceptor, list-query engine
 ```
 
@@ -93,13 +93,15 @@ stackflow/
 │       ├── shared/              paged-query engine + reusable UI (badge, paginator, empty state…)
 │       ├── layout/              authenticated shell
 │       └── features/            auth, dashboard, products, stock, orders (all lazy-loaded)
-├── docs/                        architecture, API reference, engineering notes
+├── docs/                        architecture, API reference, deployment, engineering notes
+├── render.yaml                  one-click Render blueprint (database + API + web)
 ├── docker-compose.yml           Postgres, plus a `full` profile that runs the whole stack
 └── Makefile
 ```
 
 Full reasoning behind the structure: **[docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md)**.
 Endpoint reference: **[docs/API.md](./docs/API.md)**.
+Going live: **[docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md)**.
 Bugs found, trade-offs and measurements: **[docs/ENGINEERING-NOTES.md](./docs/ENGINEERING-NOTES.md)**.
 
 ---
@@ -136,23 +138,28 @@ anywhere in the codebase.
 
 ## Deploying
 
+Two units: the API (a container) and the web app (static files). Full walkthrough in
+**[docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md)** — the short version:
+
 ```bash
-docker compose --profile full up --build     # UI on :8081, API on :8080, Postgres on :5432
+docker compose --profile full up --build     # everything locally: UI :8081, API :8080, Postgres
 ```
 
-runs all three together: Postgres, the API (multi-stage JDK→JRE image) and the UI (nginx serving the
-production bundle). The UI container proxies its same-origin `/api` calls to the API container via
-`API_UPSTREAM`, so the browser only ever talks to one origin — no CORS in that topology.
+For a hosted deployment, [`render.yaml`](./render.yaml) declares the database, the API and the static
+site in one blueprint: point Render at the repo, fill in two URLs, apply. The API also runs unchanged
+on Railway, Fly or any container host, and the frontend deploys to Vercel or Netlify with the configs
+in `frontend/`.
 
-Required in any real environment:
+Whatever the host, two variables have to agree:
 
-| Variable | Purpose |
-| --- | --- |
-| `DB_URL`, `DB_USERNAME`, `DB_PASSWORD` | Database connection |
-| `JWT_SECRET` | HMAC signing key, **at least 32 bytes**; the app refuses to start with a shorter one |
-| `CORS_ALLOWED_ORIGINS` | Exact frontend origin(s) — wildcards are not accepted |
-| `SPRING_PROFILES_ACTIVE=prod` | Disables seeding and verbose logging |
+| Where | Variable | Value |
+| --- | --- | --- |
+| API | `CORS_ALLOWED_ORIGINS` | the frontend's exact origin |
+| Web build | `API_BASE_URL` | the API's URL including `/api` |
 
-Suggested hosts: Render or Railway for the API and its Postgres, Vercel or Netlify for the frontend.
-The production frontend build calls a same-origin `/api`, so either deploy it behind the bundled nginx
-(which proxies) or add a rewrite at the host and set `CORS_ALLOWED_ORIGINS` accordingly.
+Plus, on the API: `SPRING_PROFILES_ACTIVE=prod`, a database (`DATABASE_URL` in `postgres://…` form is
+translated to JDBC automatically), and a `JWT_SECRET` of at least 32 bytes — the app refuses to start
+with a weaker one.
+
+After the first deploy, **register immediately**: the first account created on an empty database
+becomes the administrator.
