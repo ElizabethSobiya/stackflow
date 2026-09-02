@@ -8,6 +8,7 @@ import { ToastService } from '../../core/notifications/toast.service';
 import { createPagedQuery } from '../../shared/data/paged-query';
 import { EmptyState } from '../../shared/ui/empty-state';
 import { FieldError } from '../../shared/ui/field-error';
+import { Icon } from '../../shared/ui/icon';
 import { EMPTY_PRODUCT_CRITERIA, ProductsService } from '../products/products.service';
 import { OrdersService } from './orders.service';
 
@@ -26,7 +27,7 @@ interface Line {
 @Component({
   selector: 'app-order-create-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CurrencyPipe, ReactiveFormsModule, RouterLink, EmptyState, FieldError],
+  imports: [CurrencyPipe, ReactiveFormsModule, RouterLink, EmptyState, FieldError, Icon],
   template: `
     <div class="page">
       <header class="page__header">
@@ -40,17 +41,21 @@ interface Line {
       <div class="order-create">
         <section class="card">
           <div class="card__header">
-            <input
-              class="input"
-              type="search"
-              placeholder="Search the catalog…"
-              [value]="catalog.criteria().search"
-              (input)="catalog.setCriteria({ search: value($event) })"
-            />
+            <div class="input-group picker__search">
+              <span class="input-group__icon"><app-icon name="search" [size]="15" /></span>
+              <input
+                class="input"
+                type="search"
+                placeholder="Search the catalog…"
+                aria-label="Search the catalog"
+                [value]="catalog.criteria().search"
+                (input)="catalog.setCriteria({ search: value($event) })"
+              />
+            </div>
           </div>
 
           @if (catalog.isEmpty()) {
-            <app-empty-state title="No products found" hint="Try another search term." />
+            <app-empty-state icon="search" title="No products found" hint="Try another search term." />
           } @else {
             <ul class="picker">
               @for (product of catalog.items(); track product.id) {
@@ -67,8 +72,10 @@ interface Line {
                     type="button"
                     class="btn btn--sm"
                     [disabled]="(product.quantity ?? 0) === 0"
+                    [attr.aria-label]="'Add ' + product.name + ' to the order'"
                     (click)="addLine(product)"
                   >
+                    <app-icon name="plus" [size]="13" />
                     Add
                   </button>
                 </li>
@@ -99,7 +106,10 @@ interface Line {
             </div>
 
             @if (lines().length === 0) {
-              <p class="subtle">No items yet — add products from the catalog.</p>
+              <p class="basket-empty subtle">
+                <app-icon name="inbox" [size]="15" />
+                No items yet — add products from the catalog.
+              </p>
             } @else {
               <ul class="lines">
                 @for (line of lines(); track line.product.id) {
@@ -117,7 +127,14 @@ interface Line {
                       (input)="setQuantity(line, value($event))"
                     />
                     <span class="numeric">{{ line.product.price * line.quantity | currency: 'USD' }}</span>
-                    <button type="button" class="btn btn--sm btn--ghost" (click)="removeLine(line)">✕</button>
+                    <button
+                      type="button"
+                      class="btn btn--sm btn--icon btn--ghost"
+                      [attr.aria-label]="'Remove ' + line.product.name"
+                      (click)="removeLine(line)"
+                    >
+                      <app-icon name="close" [size]="14" />
+                    </button>
                   </li>
                 }
               </ul>
@@ -129,7 +146,10 @@ interface Line {
             }
 
             @if (error(); as message) {
-              <p class="form__error">{{ message }}</p>
+              <p class="alert alert--danger">
+                <app-icon name="warning" [size]="15" />
+                <span>{{ message }}</span>
+              </p>
             }
           </div>
 
@@ -149,6 +169,17 @@ interface Line {
   `,
   styles: `
     .order-create { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4); align-items: start; }
+    .picker__search { width: 100%; }
+
+    .basket-empty {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: var(--space-4);
+      border: 1px dashed var(--border-strong);
+      border-radius: var(--radius-sm);
+      background: var(--surface-inset);
+    }
     .picker, .lines { list-style: none; margin: 0; padding: 0; }
 
     .picker__row, .lines__row {
@@ -167,14 +198,6 @@ interface Line {
     .lines__total { padding-top: var(--space-2); }
     .form__footer { border-bottom: none; border-top: 1px solid var(--border); }
 
-    .form__error {
-      margin: 0;
-      padding: 9px 12px;
-      border-radius: var(--radius-sm);
-      background: var(--danger-soft);
-      color: var(--danger);
-      font-size: 13px;
-    }
 
     @media (max-width: 980px) {
       .order-create { grid-template-columns: 1fr; }

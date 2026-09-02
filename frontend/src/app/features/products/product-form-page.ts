@@ -5,6 +5,7 @@ import { toMessage } from '../../core/interceptors/error.interceptor';
 import { ProductPayload } from '../../core/models/api.models';
 import { ToastService } from '../../core/notifications/toast.service';
 import { FieldError } from '../../shared/ui/field-error';
+import { Icon } from '../../shared/ui/icon';
 import { ProductsService } from './products.service';
 
 const SKU_PATTERN = /^[A-Za-z0-9._-]+$/;
@@ -19,17 +20,20 @@ const SKU_PATTERN = /^[A-Za-z0-9._-]+$/;
 @Component({
   selector: 'app-product-form-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule, RouterLink, FieldError],
+  imports: [ReactiveFormsModule, RouterLink, FieldError, Icon],
   template: `
     <div class="page page--narrow">
       <header class="page__header">
-        <div>
+        <div class="page__title">
           <h1>{{ id() ? 'Edit product' : 'New product' }}</h1>
           <p class="muted">
             {{ id() ? 'Changing the price does not alter orders already placed.' : 'Stock is created together with the product.' }}
           </p>
         </div>
-        <a class="btn" routerLink="/products">Back to catalog</a>
+        <a class="btn" routerLink="/products">
+          <app-icon name="arrowLeft" [size]="14" />
+          Back to catalog
+        </a>
       </header>
 
       <form class="card" [formGroup]="form" (ngSubmit)="submit()">
@@ -98,7 +102,10 @@ const SKU_PATTERN = /^[A-Za-z0-9._-]+$/;
           </div>
 
           @if (error(); as message) {
-            <p class="form__error">{{ message }}</p>
+            <p class="alert alert--danger">
+              <app-icon name="warning" [size]="15" />
+              <span>{{ message }}</span>
+            </p>
           }
         </div>
 
@@ -118,14 +125,6 @@ const SKU_PATTERN = /^[A-Za-z0-9._-]+$/;
     .page--narrow { max-width: 860px; }
     .form__footer { border-bottom: none; border-top: 1px solid var(--border); }
 
-    .form__error {
-      margin: 0;
-      padding: 9px 12px;
-      border-radius: var(--radius-sm);
-      background: var(--danger-soft);
-      color: var(--danger);
-      font-size: 13px;
-    }
   `,
 })
 export class ProductFormPage {

@@ -9,6 +9,7 @@ import { pageRequest } from '../../core/api/page-request';
 import { createPagedQuery } from '../../shared/data/paged-query';
 import { EmptyState } from '../../shared/ui/empty-state';
 import { FieldError } from '../../shared/ui/field-error';
+import { Icon } from '../../shared/ui/icon';
 import { LoadingRows } from '../../shared/ui/loading-rows';
 import { Paginator } from '../../shared/ui/paginator';
 import { StockService } from './stock.service';
@@ -33,17 +34,21 @@ const REASONS: StockMovementReason[] = [
     EmptyState,
     LoadingRows,
     FieldError,
+    Icon,
   ],
   template: `
     <div class="page">
       <header class="page__header">
-        <div>
+        <div class="page__title">
           <h1>Stock</h1>
           <p class="muted">
             Products at or below their low-stock threshold. Every adjustment is recorded with a reason.
           </p>
         </div>
-        <button type="button" class="btn" (click)="query.reload()">Refresh</button>
+        <button type="button" class="btn" (click)="query.reload()">
+          <app-icon name="refresh" [size]="14" />
+          Refresh
+        </button>
       </header>
 
       <div class="stock__split">
@@ -53,7 +58,11 @@ const REASONS: StockMovementReason[] = [
           @if (query.loading() && query.items().length === 0) {
             <app-loading-rows />
           } @else if (query.isEmpty()) {
-            <app-empty-state title="Everything is above threshold" hint="Nothing needs restocking right now." />
+            <app-empty-state
+              icon="check"
+              title="Everything is above threshold"
+              hint="Nothing needs restocking right now."
+            />
           } @else {
             <div class="table-wrap">
               <table class="table">
@@ -80,7 +89,10 @@ const REASONS: StockMovementReason[] = [
                       <td class="text-right numeric">{{ item.price * item.quantity | currency: 'USD' }}</td>
                       <td>
                         <div class="table__actions">
-                          <button type="button" class="btn btn--sm" (click)="select(item)">Adjust</button>
+                          <button type="button" class="btn btn--sm" (click)="select(item)">
+                            <app-icon name="edit" [size]="13" />
+                            Adjust
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -96,7 +108,14 @@ const REASONS: StockMovementReason[] = [
           @if (selected(); as item) {
             <div class="card__header">
               <h2>{{ item.productName }}</h2>
-              <button type="button" class="btn btn--sm btn--ghost" (click)="selected.set(null)">Close</button>
+              <button
+                type="button"
+                class="btn btn--sm btn--icon btn--ghost"
+                aria-label="Close adjustment panel"
+                (click)="selected.set(null)"
+              >
+                <app-icon name="close" [size]="14" />
+              </button>
             </div>
 
             <form class="card__body stack" [formGroup]="form" (ngSubmit)="adjust()">
@@ -126,7 +145,10 @@ const REASONS: StockMovementReason[] = [
               </div>
 
               @if (error(); as message) {
-                <p class="form__error">{{ message }}</p>
+                <p class="alert alert--danger">
+                  <app-icon name="warning" [size]="15" />
+                  <span>{{ message }}</span>
+                </p>
               }
 
               <button type="submit" class="btn btn--primary" [disabled]="submitting()">
@@ -158,6 +180,7 @@ const REASONS: StockMovementReason[] = [
             </div>
           } @else {
             <app-empty-state
+              icon="layers"
               title="Select a product"
               hint="Choose a row to adjust its stock and see its movement history."
             />
@@ -180,15 +203,6 @@ const REASONS: StockMovementReason[] = [
     }
 
     .movements__delta--out { color: var(--danger); }
-
-    .form__error {
-      margin: 0;
-      padding: 9px 12px;
-      border-radius: var(--radius-sm);
-      background: var(--danger-soft);
-      color: var(--danger);
-      font-size: 13px;
-    }
 
     @media (max-width: 980px) {
       .stock__split { grid-template-columns: 1fr; }
