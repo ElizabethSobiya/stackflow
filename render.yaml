@@ -11,7 +11,9 @@ services:
     name: stackflow-api
     runtime: docker
     plan: free
-    region: frankfurt
+    # Keep this near the Supabase project. The database is in ap-northeast-1 (Tokyo), and
+    # Singapore is the closest free Render region — Frankfurt adds ~230ms to every query.
+    region: singapore
     dockerfilePath: ./backend/Dockerfile
     dockerContext: ./backend
     # Render waits for this before routing traffic, and restarts the instance if it stops passing.
