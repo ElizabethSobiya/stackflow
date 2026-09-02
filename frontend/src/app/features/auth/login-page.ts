@@ -4,67 +4,77 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { toMessage } from '../../core/interceptors/error.interceptor';
 import { AuthService } from '../../core/auth/auth.service';
 import { FieldError } from '../../shared/ui/field-error';
+import { Icon } from '../../shared/ui/icon';
+import { BrandPanel } from './brand-panel';
+
+const DEMO = { email: 'admin@stackflow.dev', password: 'Password123!' };
 
 @Component({
   selector: 'app-login-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule, RouterLink, FieldError],
+  imports: [ReactiveFormsModule, RouterLink, FieldError, Icon, BrandPanel],
   styleUrl: './auth-card.scss',
   template: `
-    <div class="auth">
-      <div class="auth__brand">
-        <span class="auth__mark">SF</span>
-        <strong>StackFlow</strong>
-      </div>
+    <app-brand-panel />
 
-      <div class="card">
-        <div class="card__body">
-          <h1 class="auth__title">Sign in</h1>
-          <p class="auth__subtitle">Inventory and order management</p>
+    <div class="form-panel">
+      <div class="auth">
+        <h1 class="auth__title">Welcome back</h1>
+        <p class="auth__subtitle">Sign in to manage your catalog, stock and orders.</p>
 
-          <form class="stack" [formGroup]="form" (ngSubmit)="submit()">
-            <div class="field">
-              <label class="field__label" for="email">Email</label>
-              <input
-                id="email"
-                type="email"
-                class="input"
-                formControlName="email"
-                autocomplete="username"
-                [class.is-invalid]="form.controls.email.touched && form.controls.email.invalid"
-              />
-              <app-field-error [control]="form.controls.email" />
-            </div>
+        <form class="stack" [formGroup]="form" (ngSubmit)="submit()">
+          <div class="field">
+            <label class="field__label" for="email">Email</label>
+            <input
+              id="email"
+              type="email"
+              class="input"
+              formControlName="email"
+              autocomplete="username"
+              placeholder="you@company.com"
+              [class.is-invalid]="form.controls.email.touched && form.controls.email.invalid"
+            />
+            <app-field-error [control]="form.controls.email" />
+          </div>
 
-            <div class="field">
-              <label class="field__label" for="password">Password</label>
-              <input
-                id="password"
-                type="password"
-                class="input"
-                formControlName="password"
-                autocomplete="current-password"
-                [class.is-invalid]="form.controls.password.touched && form.controls.password.invalid"
-              />
-              <app-field-error [control]="form.controls.password" />
-            </div>
+          <div class="field">
+            <label class="field__label" for="password">Password</label>
+            <input
+              id="password"
+              type="password"
+              class="input"
+              formControlName="password"
+              autocomplete="current-password"
+              placeholder="••••••••"
+              [class.is-invalid]="form.controls.password.touched && form.controls.password.invalid"
+            />
+            <app-field-error [control]="form.controls.password" />
+          </div>
 
-            @if (error(); as message) {
-              <p class="auth__error">{{ message }}</p>
+          @if (error(); as message) {
+            <p class="alert alert--danger">
+              <app-icon name="warning" [size]="15" />
+              <span>{{ message }}</span>
+            </p>
+          }
+
+          <button type="submit" class="btn btn--primary auth__submit" [disabled]="submitting()">
+            {{ submitting() ? 'Signing in…' : 'Sign in' }}
+            @if (!submitting()) {
+              <app-icon name="arrowRight" [size]="15" />
             }
+          </button>
+        </form>
 
-            <button type="submit" class="btn btn--primary auth__submit" [disabled]="submitting()">
-              {{ submitting() ? 'Signing in…' : 'Sign in' }}
-            </button>
-          </form>
+        <p class="auth__alt">No account yet? <a routerLink="/register">Create one</a></p>
 
-          <p class="auth__alt subtle">
-            No account yet? <a routerLink="/register">Create one</a>
-          </p>
-
-          <p class="auth__hint">
-            Demo data: <strong>admin&#64;stackflow.dev</strong> / <strong>Password123!</strong>
-          </p>
+        <div class="auth__hint">
+          <app-icon name="info" [size]="15" />
+          <span class="auth__hint-body">
+            <span>Demo account</span>
+            <code>{{ demo.email }} · {{ demo.password }}</code>
+          </span>
+          <button type="button" class="btn btn--sm" (click)="fillDemo()">Use</button>
         </div>
       </div>
     </div>
@@ -75,6 +85,7 @@ export class LoginPage {
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
 
+  protected readonly demo = DEMO;
   protected readonly submitting = signal(false);
   protected readonly error = signal<string | null>(null);
 
@@ -82,6 +93,11 @@ export class LoginPage {
     email: ['', [Validators.required, Validators.email]],
     password: ['', [Validators.required]],
   });
+
+  /** One click to a working session — the demo credentials are seeded, not privileged. */
+  protected fillDemo(): void {
+    this.form.setValue(DEMO);
+  }
 
   protected submit(): void {
     if (this.form.invalid || this.submitting()) {
